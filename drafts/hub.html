@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sovereign Multi-Domain WebMCP Hub</title>
+</head>
+<body style="font-family: sans-serif; margin: 25px; background: #f8f9fa; color: #212529;">
+
+    <div style="max-width: 750px; margin: 0 auto; background: white; padding: 25px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h2 style="margin-top: 0; color: #343a40;">Multi-Domain WebMCP Hub</h2>
+        <p style="font-size: 14px; color: #6c757d;">Orchestrating tools across same-origin and verified external secure domains.</p>
+        
+        <button onclick="myPollAllActiveNodes()" style="padding: 10px 18px; background: #e83e8c; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-bottom: 15px;">
+            Execute Multi-Domain WebMCP Matrix Poll
+        </button>
+
+        <div id="myOutputConsole" style="background: #1e1e1e; color: #a6e22e; padding: 15px; font-family: monospace; border-radius: 4px; min-height: 140px; white-space: pre-wrap; font-size: 13px;">
+Awaiting command execution...
+        </div>
+
+        <h3 style="margin-top: 25px; font-size: 16px;">Active Embedded Frame Cluster:</h3>
+        
+        <iframe id="myFrameA" src="https://<your-primary-username>.github.io/node-a.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; margin-bottom: 10px; border-radius: 4px;"></iframe>
+        <iframe id="myFrameB" src="https://<your-primary-username>.github.io/node-b.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; margin-bottom: 10px; border-radius: 4px;"></iframe>
+        
+        <iframe id="myFrameC" src="https://<your-second-username>.github.io/node-c.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; border-radius: 4px;"></iframe>
+    </div>
+
+    <script>
+        function myLog(myMessage) {
+            const myConsole = document.getElementById("myOutputConsole");
+            myConsole.innerText += "\n" + `[${new Date().toLocaleTimeString()}] ${myMessage}`;
+        }
+
+        async function myPollAllActiveNodes() {
+            myLog("Evaluating local origin space tools...");
+
+            if (!navigator.modelContext) {
+                myLog("❌ WebMCP is unavailable.");
+                return;
+            }
+
+            try {
+                // 1. Fetch default tools (This auto-discovers same-origin Node A & Node B)
+                let myMasterToolsArray = await navigator.modelContext.getTools();
+                myLog(`Discovered ${myMasterToolsArray.length} local-origin ecosystem tools.`);
+
+                // 2. Explicitly query the authorized external origin to look for Node C
+                const myExternalOriginString = "https://<your-second-username>.github.io";
+                myLog(`Reaching across domain boundaries to scan: ${myExternalOriginString}`);
+                
+                try {
+                    const myCrossDomainTools = await navigator.modelContext.getTools({ origin: myExternalOriginString });
+                    myLog(`Cross-origin scan successful. Discovered ${myCrossDomainTools.length} shared remote tools.`);
+                    // Append the cross-origin discoveries to our tracking array
+                    myMasterToolsArray = myMasterToolsArray.concat(myCrossDomainTools);
+                } catch (myCrossOriginError) {
+                    myLog(`⚠️ Could not reach external domain array: ${myCrossOriginError.message}`);
+                }
+
+                // 3. Loop through and execute everything in the combined catalog
+                for (const myTool of myMasterToolsArray) {
+                    if (["fetch_node_a_data", "fetch_node_b_data", "fetch_node_c_data"].includes(myTool.name)) {
+                        myLog(`⚡ Running validated execution block on: [${myTool.name}]`);
+                        
+                        const myResponse = await navigator.modelContext.executeTool(myTool, "{}");
+                        if (myResponse && myResponse.content) {
+                            myLog(`🎉 Received payload from [${myTool.name}]: ${myResponse.content[0].text}`);
+                        }
+                    }
+                }
+            } catch (myGlobalError) {
+                myLog(`❌ Global Loop Defect: ${myGlobalError.message}`);
+            }
+        }
+    </script>
+</body>
+</html>
