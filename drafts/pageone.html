@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bare-Bones WebMCP Test</title>
+</head>
+<body style="font-family: sans-serif; margin: 40px; background-color: #f9f9f9; color: #333;">
+
+    <div style="max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0;">Local WebMCP Status Check</h2>
+        <p>This page registers a local tool to the browser's <code>navigator.modelContext</code> layer.</p>
+        
+        <div id="myStatusDisplay" style="padding: 10px; margin-bottom: 20px; background: #fff3cd; border-left: 4px solid #ffc107;">
+            Checking WebMCP availability...
+        </div>
+
+        <fieldset style="border: 1px solid #ccc; padding: 15px; border-radius: 4px;">
+            <legend style="font-weight: bold; padding: 0 5px;">Local Automation Target</legend>
+            <label for="myTextInput" style="display: block; margin-bottom: 5px;">Text Value:</label>
+            <input type="text" id="myTextInput" value="Initial Value" style="width: 100%; padding: 8px; margin-bottom: 15px; box-sizing: border-box;">
+            
+            <button onclick="myUpdateTextFunction('Manual update executed')" style="padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Reset Default Text
+            </button>
+        </fieldset>
+    </div>
+
+    <script>
+        // Update the visual UI state manually
+        function myUpdateTextFunction(myMessageText) {
+            document.getElementById('myTextInput').value = myMessageText;
+        }
+
+        // Initialize and register WebMCP tools
+        async function myInitializeWebMcp() {
+            const myStatusDiv = document.getElementById('myStatusDisplay');
+
+            // 1. Verify browser implementation of the API
+            if (!navigator.modelContext) {
+                myStatusDiv.innerText = "❌ WebMCP API (navigator.modelContext) is not available in this browser. Please check your chrome://flags.";
+                myStatusDiv.style.background = "#f8d7da";
+                myStatusDiv.style.borderLeftColor = "#dc3545";
+                return;
+            }
+
+            myStatusDiv.innerText = "⚡ WebMCP detected. Registering tools...";
+            myStatusDiv.style.background = "#d1ecf1";
+            myStatusDiv.style.borderLeftColor = "#17a2b8";
+
+            try {
+                // 2. Register an Imperative Tool matching the WebMCP standard
+                await navigator.modelContext.registerTool({
+                    name: "update_local_page_text",
+                    description: "Updates the text field inside the local technology playground webpage.",
+                    inputSchema: {
+                        type: "object",
+                        properties: {
+                            newText: {
+                                type: "string",
+                                description: "The new string content to input into the text field."
+                            }
+                        },
+                        required: ["newText"]
+                    },
+                    // The execution entry point invoked by an external agent client/server
+                    execute: async (myArguments) => {
+                        if (myArguments && myArguments.newText) {
+                            myUpdateTextFunction(myArguments.newText);
+                            return {
+                                content: [{
+                                    type: "text",
+                                    text: `Successfully changed page text to: "${myArguments.newText}"`
+                                }]
+                            };
+                        } else {
+                            throw new Error("Missing required argument: newText");
+                        }
+                    }
+                });
+
+                myStatusDiv.innerText = "✅ Tool 'update_local_page_text' registered successfully! Ready for server/agent connection.";
+                myStatusDiv.style.background = "#d4edda";
+                myStatusDiv.style.borderLeftColor = "#28a745";
+
+            } catch (myError) {
+                myStatusDiv.innerText = "❌ Registration error: " + myError.message;
+                myStatusDiv.style.background = "#f8d7da";
+                myStatusDiv.style.borderLeftColor = "#dc3545";
+            }
+        }
+
+        // Trigger on load
+        myInitializeWebMcp();
+    </script>
+</body>
+</html>
