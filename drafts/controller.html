@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Local WebMCP Controller Hub</title>
+</head>
+<body style="font-family: sans-serif; margin: 30px; background: #eef2f3;">
+
+    <div style="max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <h2 style="margin-top:0;">Local WebMCP Sovereign Controller</h2>
+        <p>This local dashboard controls and polls tools from secure online nodes simultaneously.</p>
+        
+        <button onclick="myPollOnlineNodes()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            Poll Online WebMCP Targets
+        </button>
+
+        <div id="myConsoleLogs" style="margin-top: 20px; padding: 15px; background: #222; color: #00ff00; font-family: monospace; border-radius: 4px; min-height: 100px; white-space: pre-wrap;">
+System initialized. Awaiting manual poll step...
+        </div>
+
+        <h4 style="margin-top: 30px;">Active Connected Node Preview:</h4>
+        <iframe id="myTargetIframe" 
+                src="https://<your-username>.github.io/target.html" 
+                allow="tools" 
+                style="width: 100%; height: 250px; border: 1px dashed #aaa; border-radius: 4px; background: #fafafa;">
+        </iframe>
+    </div>
+
+    <script>
+        function myLogToScreen(myText) {
+            const myLogDiv = document.getElementById("myConsoleLogs");
+            myLogDiv.innerText += "\n" + `[${new Date().toLocaleTimeString()}] ${myText}`;
+        }
+
+        async function myPollOnlineNodes() {
+            myLogToScreen("Initiating parallel WebMCP node validation check...");
+
+            // Check if the browser testing tools interface is exposed via active flags
+            if (!navigator.modelContextTesting) {
+                myLogToScreen("❌ Error: navigator.modelContextTesting is not exposed. Ensure 'WebMCP for testing' flag is enabled.");
+                return;
+            }
+
+            try {
+                // Discover what tools the context currently sees across loaded contexts
+                myLogToScreen("Scanning active browser frames for declared WebMCP blueprints...");
+                const myAvailableToolsList = await navigator.modelContextTesting.listTools();
+                
+                myLogToScreen(`Discovered ${myAvailableToolsList.length} active browser tools.`);
+
+                // Locate our target function
+                const myTargetExists = myAvailableToolsList.find(myToolItem => myToolItem.name === "fetch_online_node_data");
+
+                if (myTargetExists) {
+                    myLogToScreen("🎯 Found 'fetch_online_node_data' target. Executing call contract...");
+                    
+                    // Directly execute the tool across the frame context boundary
+                    const myExecutionResponse = await navigator.modelContextTesting.executeTool("fetch_online_node_data", {});
+                    
+                    const myRawPayloadText = myExecutionResponse.content[0].text;
+                    myLogToScreen(`🎉 Node response received: ${myRawPayloadText}`);
+                } else {
+                    myLogToScreen("⚠️ Target tool 'fetch_online_node_data' not seen yet. Is the iframe fully loaded and running HTTPS?");
+                }
+
+            } catch (myExecutionError) {
+                myLogToScreen(`❌ Execution lifecycle failure: ${myExecutionError.message}`);
+            }
+        }
+    </script>
+</body>
+</html>
