@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebMCP Online Target Node</title>
+</head>
+<body style="font-family: sans-serif; padding: 20px; background: #f4f6f9; color: #333;">
+
+    <div style="border: 1px solid #ccc; background: white; padding: 20px; border-radius: 6px; max-width: 500px;">
+        <h3>Online Node: Active Monitoring Area</h3>
+        <p>Status: <span id="myStatusNode" style="font-weight: bold; color: orange;">Initializing...</span></p>
+        
+        <label style="display:block; margin: 10px 0 5px;">Live Page Metric/Data:</label>
+        <input type="text" id="myDataField" value="Sensor Value: 42" style="width: 100%; padding: 6px;">
+    </div>
+
+    <script>
+        async function myRegisterTargetTool() {
+            const myStatusEl = document.getElementById("myStatusNode");
+            
+            if (!navigator.modelContext) {
+                myStatusEl.innerText = "WebMCP Missing";
+                myStatusEl.style.color = "red";
+                return;
+            }
+
+            try {
+                await navigator.modelContext.registerTool({
+                    name: "fetch_online_node_data",
+                    description: "Retrieves the live input text value directly from this online target webpage node.",
+                    inputSchema: { type: "object", properties: {} },
+                    execute: async () => {
+                        const myCurrentValue = document.getElementById("myDataField").value;
+                        return {
+                            content: [{
+                                type: "text",
+                                text: JSON.stringify({ liveData: myCurrentValue })
+                            }]
+                        };
+                    }
+                });
+                myStatusEl.innerText = "Online & Registered";
+                myStatusEl.style.color = "green";
+            } catch (myErr) {
+                myStatusEl.innerText = "Error: " + myErr.message;
+                myStatusEl.style.color = "red";
+            }
+        }
+        
+        myRegisterTargetTool();
+    </script>
+</body>
+</html>
