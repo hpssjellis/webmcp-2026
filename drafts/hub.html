@@ -20,8 +20,11 @@
             <button onclick="myExecuteSpecificNodeTool('fetch_node_b_data')" style="padding: 10px 14px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
                 Extract Node B
             </button>
-            <button onclick="myExecuteExternalNodeTool('fetch_node_c_data')" style="padding: 10px 14px; background: #ffc107; color: #212529; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
-                Extract Render Node C
+            <button onclick="myExecuteSpecificNodeTool('fetch_node_c_data')" style="padding: 10px 14px; background: #ffc107; color: #212529; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                Extract Local Node C
+            </button>
+            <button onclick="myRefreshIFrames()" style="padding: 10px 14px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Force Frame Reset
             </button>
         </div>
 
@@ -38,10 +41,9 @@ No information extracted yet.
 
         <h3 style="margin-top: 25px; font-size: 16px;">Active Embedded Frame Cluster:</h3>
         
-        <iframe id="myFrameA" src="https://hpssjellis.github.io/webmcp-2026/drafts/node-a.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; margin-bottom: 10px; border-radius: 4px;"></iframe>
-        <iframe id="myFrameB" src="https://hpssjellis.github.io/webmcp-2026/drafts/node-b.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; margin-bottom: 10px; border-radius: 4px;"></iframe>
-        
-        <iframe id="myFrameC" src="https://hpssjellis.github.io/fred/public/webmcp/node-c.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; border-radius: 4px;"></iframe>
+        <iframe id="myFrameA" src="node-a.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; margin-bottom: 10px; border-radius: 4px;"></iframe>
+        <iframe id="myFrameB" src="node-b.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; margin-bottom: 10px; border-radius: 4px;"></iframe>
+        <iframe id="myFrameC" src="node-c-backup.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; border-radius: 4px;"></iframe>
     </div>
 
     <script>
@@ -55,8 +57,15 @@ No information extracted yet.
             myPanel.innerText = myDataText;
         }
 
+        function myRefreshIFrames() {
+            myLog("🔄 Re-initializing frame stack to sync tool registration loops...");
+            document.getElementById("myFrameA").src = document.getElementById("myFrameA").src;
+            document.getElementById("myFrameB").src = document.getElementById("myFrameB").src;
+            document.getElementById("myFrameC").src = document.getElementById("myFrameC").src;
+        }
+
         async function myPollAllActiveNodes() {
-            myLog("Evaluating local and remote matrix space tools...");
+            myLog("Evaluating current active local origin tools...");
 
             if (!navigator.modelContext) {
                 myLog("❌ WebMCP is unavailable.");
@@ -64,22 +73,17 @@ No information extracted yet.
             }
 
             try {
+                // Since everything is on github.io right now, getTools() fetches all 3 automatically
                 let myMasterToolsArray = await navigator.modelContext.getTools();
+                myLog(`Discovered ${myMasterToolsArray.length} total available same-origin tools.`);
                 
-                try {
-                    const myRenderTools = await navigator.modelContext.getTools({ origin: "https://hpssjellis.github.io" });
-                    myMasterToolsArray = myMasterToolsArray.concat(myRenderTools);
-                } catch (myRemoteErr) {
-                    myLog(`⚠️ Could not reach Render origin space: ${myRemoteErr.message}`);
-                }
-
-                myLog(`Discovered ${myMasterToolsArray.length} total available ecosystem tools.`);
                 let myCombinedResultsString = "";
 
                 for (const myTool of myMasterToolsArray) {
                     if (["fetch_node_a_data", "fetch_node_b_data", "fetch_node_c_data"].includes(myTool.name)) {
-                        myLog(`⚡ Running automatic execution block on: [${myTool.name}]`);
+                        myLog(`⚡ Running execution block on: [${myTool.name}]`);
                         const myResponse = await navigator.modelContext.executeTool(myTool, "{}");
+                        
                         if (myResponse && myResponse.content && myResponse.content[0]) {
                             const myRawText = myResponse.content[0].text;
                             myLog(`🎉 Payload [${myTool.name}]: ${myRawText}`);
@@ -90,6 +94,8 @@ No information extracted yet.
 
                 if (myCombinedResultsString) {
                     myUpdateDisplayPanel(myCombinedResultsString.trim());
+                } else {
+                    myUpdateDisplayPanel("No tools responded during global poll.");
                 }
             } catch (myGlobalError) {
                 myLog(`❌ Matrix Loop Defect: ${myGlobalError.message}`);
@@ -99,12 +105,12 @@ No information extracted yet.
         async function myExecuteSpecificNodeTool(myTargetToolName) {
             if (!navigator.modelContext) return;
             try {
-                myLog(`Searching local context for: ${myTargetToolName}`);
+                myLog(`Searching context stack for: ${myTargetToolName}`);
                 const myAvailableTools = await navigator.modelContext.getTools();
                 const mySelectedTool = myAvailableTools.find(myTool => myTool.name === myTargetToolName);
 
                 if (!mySelectedTool) {
-                    myLog(`⚠️ Tool '${myTargetToolName}' not found locally.`);
+                    myLog(`⚠️ Tool '${myTargetToolName}' not found. Try pressing 'Force Frame Reset'.`);
                     return;
                 }
 
@@ -113,40 +119,13 @@ No information extracted yet.
                 
                 if (myResponse && myResponse.content && myResponse.content[0]) {
                     const myRawText = myResponse.content[0].text;
-                    myLog(`🎉 Direct Response from local node: ${myRawText}`);
+                    myLog(`🎉 Direct Response from node: ${myRawText}`);
                     myUpdateDisplayPanel(myRawText);
                 } else {
                     myLog(`⚠️ Tool executed but returned empty contents.`);
                 }
             } catch (myError) {
                 myLog(`❌ Execution Failure: ${myError.message}`);
-            }
-        }
-
-        async function myExecuteExternalNodeTool(myTargetToolName, myExternalOrigin) {
-            if (!navigator.modelContext) return;
-            try {
-                myLog(`Querying isolated cross-origin space [${myExternalOrigin}] for ${myTargetToolName}...`);
-                const myRemoteTools = await navigator.modelContext.getTools({ origin: myExternalOrigin });
-                const mySelectedTool = myRemoteTools.find(myTool => myTool.name === myTargetToolName);
-
-                if (!mySelectedTool) {
-                    myLog(`⚠️ External tool '${myTargetToolName}' was not exposed by the remote host.`);
-                    return;
-                }
-
-                myLog(`⚡ Executing isolated cross-domain call to [${mySelectedTool.name}]...`);
-                const myResponse = await navigator.modelContext.executeTool(mySelectedTool, "{}");
-                
-                if (myResponse && myResponse.content && myResponse.content[0]) {
-                    const myRawText = myResponse.content[0].text;
-                    myLog(`🎉 Direct Cross-Origin Response: ${myRawText}`);
-                    myUpdateDisplayPanel(myRawText);
-                } else {
-                    myLog(`⚠️ Cross-origin tool executed but returned empty contents.`);
-                }
-            } catch (myError) {
-                myLog(`❌ Cross-Origin Communication Failed: ${myError.message}`);
             }
         }
     </script>
