@@ -68,28 +68,60 @@ Awaiting command execution...
             }
         }
 
+       // Handler for same-origin local context tools (Node A and Node B)
         async function myExecuteSpecificNodeTool(myTargetToolName) {
             if (!navigator.modelContext) {
                 myLog("❌ WebMCP API not found.");
                 return;
             }
             try {
-                myLog(`Searching for specific tool context: ${myTargetToolName}`);
+                myLog(`Searching local context for: ${myTargetToolName}`);
                 const myAvailableTools = await navigator.modelContext.getTools();
                 const mySelectedTool = myAvailableTools.find(myTool => myTool.name === myTargetToolName);
 
                 if (!mySelectedTool) {
-                    myLog(`⚠️ Target tool '${myTargetToolName}' not currently exposed in frame cluster.`);
+                    myLog(`⚠️ Tool '${myTargetToolName}' not found locally.`);
                     return;
                 }
 
                 myLog(`⚡ Executing isolated call to [${mySelectedTool.name}]...`);
                 const myResponse = await navigator.modelContext.executeTool(mySelectedTool, "{}");
-                if (myResponse && myResponse.content) {
-                    myLog(`🎉 Direct Response from ${myTargetToolName}: ${myResponse.content[0].text}`);
+                
+                // FIX: Ensure the text payload is extracted and logged to the UI
+                if (myResponse && myResponse.content && myResponse.content[0]) {
+                    myLog(`🎉 Direct Response from local node: ${myResponse.content[0].text}`);
+                } else {
+                    myLog(`⚠️ Tool executed but returned empty contents.`);
                 }
-            } catch (myExecutionError) {
-                myLog(`❌ Isolated Execution Failure: ${myExecutionError.message}`);
+            } catch (myError) {
+                myLog(`❌ Execution Failure: ${myError.message}`);
+            }
+        }
+
+        // Targeted handler explicitly built for querying the cross-origin Render domain (Node C)
+        async function myExecuteExternalNodeTool(myTargetToolName, myExternalOrigin) {
+            if (!navigator.modelContext) return;
+            try {
+                myLog(`Querying isolated cross-origin space [${myExternalOrigin}] for ${myTargetToolName}...`);
+                const myRemoteTools = await navigator.modelContext.getTools({ origin: myExternalOrigin });
+                const mySelectedTool = myRemoteTools.find(myTool => myTool.name === myTargetToolName);
+
+                if (!mySelectedTool) {
+                    myLog(`⚠️ External tool '${myTargetToolName}' was not exposed by the remote host.`);
+                    return;
+                }
+
+                myLog(`⚡ Executing isolated cross-domain call to [${mySelectedTool.name}]...`);
+                const myResponse = await navigator.modelContext.executeTool(mySelectedTool, "{}");
+                
+                // FIX: Ensure cross-origin data payload is extracted and logged to the UI
+                if (myResponse && myResponse.content && myResponse.content[0]) {
+                    myLog(`🎉 Direct Cross-Origin Response: ${myResponse.content[0].text}`);
+                } else {
+                    myLog(`⚠️ Cross-origin tool executed but returned empty contents.`);
+                }
+            } catch (myError) {
+                myLog(`❌ Cross-Origin Communication Failed: ${myError.message}`);
             }
         }
     </script>
