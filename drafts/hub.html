@@ -8,7 +8,7 @@
 
     <div style="max-width: 750px; margin: 0 auto; background: white; padding: 25px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
         <h2 style="margin-top: 0; color: #343a40;">Multi-Domain WebMCP Hub</h2>
-        <p style="font-size: 14px; color: #6c757d;">Orchestrating tools across same-origin and verified external secure domains.</p>
+        <p style="font-size: 14px; color: #6c757d;">Orchestrating tools across separate, isolated secure domains.</p>
         
         <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
             <button onclick="myPollAllActiveNodes()" style="padding: 10px 18px; background: #e83e8c; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
@@ -20,8 +20,8 @@
             <button onclick="myExecuteSpecificNodeTool('fetch_node_b_data')" style="padding: 10px 14px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
                 Extract Node B
             </button>
-            <button onclick="myExecuteSpecificNodeTool('fetch_node_c_data')" style="padding: 10px 14px; background: #ffc107; color: #212529; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
-                Extract Node C
+            <button onclick="myExecuteExternalNodeTool('fetch_node_c_data', 'https://your-app.onrender.com')" style="padding: 10px 14px; background: #ffc107; color: #212529; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                Extract Render Node C
             </button>
         </div>
 
@@ -29,11 +29,19 @@
 Awaiting command execution...
         </div>
 
+        <div style="margin-top: 15px;">
+            <label style="display: block; font-size: 12px; font-weight: bold; text-transform: uppercase; color: #495057; margin-bottom: 5px;">Extracted Data Payload State:</label>
+            <div id="myDataDisplayPanel" style="background: #e9ecef; color: #495057; padding: 15px; font-family: monospace; border-radius: 4px; border: 1px solid #ced4da; min-height: 40px; white-space: pre-wrap; font-size: 13px;">
+No information extracted yet.
+            </div>
+        </div>
+
         <h3 style="margin-top: 25px; font-size: 16px;">Active Embedded Frame Cluster:</h3>
         
         <iframe id="myFrameA" src="https://hpssjellis.github.io/webmcp-2026/drafts/node-a.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; margin-bottom: 10px; border-radius: 4px;"></iframe>
         <iframe id="myFrameB" src="https://hpssjellis.github.io/webmcp-2026/drafts/node-b.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; margin-bottom: 10px; border-radius: 4px;"></iframe>
-        <iframe id="myFrameC" src="https://hpssjellis.github.io/fred/public/webmcp/node-c.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; border-radius: 4px;"></iframe>
+        
+        <iframe id="myFrameC" src="https://your-app.onrender.com/node-c.html" allow="tools" style="width: 100%; height: 95px; border: 1px dashed #ced4da; border-radius: 4px;"></iframe>
     </div>
 
     <script>
@@ -42,8 +50,13 @@ Awaiting command execution...
             myConsole.innerText += "\n" + `[${new Date().toLocaleTimeString()}] ${myMessage}`;
         }
 
+        function myUpdateDisplayPanel(myDataText) {
+            const myPanel = document.getElementById("myDataDisplayPanel");
+            myPanel.innerText = myDataText;
+        }
+
         async function myPollAllActiveNodes() {
-            myLog("Evaluating local origin space tools...");
+            myLog("Evaluating local and remote matrix space tools...");
 
             if (!navigator.modelContext) {
                 myLog("❌ WebMCP is unavailable.");
@@ -52,28 +65,39 @@ Awaiting command execution...
 
             try {
                 let myMasterToolsArray = await navigator.modelContext.getTools();
-                myLog(`Discovered ${myMasterToolsArray.length} available ecosystem tools.`);
+                
+                try {
+                    const myRenderTools = await navigator.modelContext.getTools({ origin: "https://your-app.onrender.com" });
+                    myMasterToolsArray = myMasterToolsArray.concat(myRenderTools);
+                } catch (myRemoteErr) {
+                    myLog(`⚠️ Could not reach Render origin space: ${myRemoteErr.message}`);
+                }
+
+                myLog(`Discovered ${myMasterToolsArray.length} total available ecosystem tools.`);
+                let myCombinedResultsString = "";
 
                 for (const myTool of myMasterToolsArray) {
                     if (["fetch_node_a_data", "fetch_node_b_data", "fetch_node_c_data"].includes(myTool.name)) {
                         myLog(`⚡ Running automatic execution block on: [${myTool.name}]`);
                         const myResponse = await navigator.modelContext.executeTool(myTool, "{}");
-                        if (myResponse && myResponse.content) {
-                            myLog(`🎉 Payload [${myTool.name}]: ${myResponse.content[0].text}`);
+                        if (myResponse && myResponse.content && myResponse.content[0]) {
+                            const myRawText = myResponse.content[0].text;
+                            myLog(`🎉 Payload [${myTool.name}]: ${myRawText}`);
+                            myCombinedResultsString += `[${myTool.name}] -> ${myRawText}\n`;
                         }
                     }
+                }
+
+                if (myCombinedResultsString) {
+                    myUpdateDisplayPanel(myCombinedResultsString.trim());
                 }
             } catch (myGlobalError) {
                 myLog(`❌ Matrix Loop Defect: ${myGlobalError.message}`);
             }
         }
 
-       // Handler for same-origin local context tools (Node A and Node B)
         async function myExecuteSpecificNodeTool(myTargetToolName) {
-            if (!navigator.modelContext) {
-                myLog("❌ WebMCP API not found.");
-                return;
-            }
+            if (!navigator.modelContext) return;
             try {
                 myLog(`Searching local context for: ${myTargetToolName}`);
                 const myAvailableTools = await navigator.modelContext.getTools();
@@ -87,9 +111,10 @@ Awaiting command execution...
                 myLog(`⚡ Executing isolated call to [${mySelectedTool.name}]...`);
                 const myResponse = await navigator.modelContext.executeTool(mySelectedTool, "{}");
                 
-                // FIX: Ensure the text payload is extracted and logged to the UI
                 if (myResponse && myResponse.content && myResponse.content[0]) {
-                    myLog(`🎉 Direct Response from local node: ${myResponse.content[0].text}`);
+                    const myRawText = myResponse.content[0].text;
+                    myLog(`🎉 Direct Response from local node: ${myRawText}`);
+                    myUpdateDisplayPanel(myRawText);
                 } else {
                     myLog(`⚠️ Tool executed but returned empty contents.`);
                 }
@@ -98,7 +123,6 @@ Awaiting command execution...
             }
         }
 
-        // Targeted handler explicitly built for querying the cross-origin Render domain (Node C)
         async function myExecuteExternalNodeTool(myTargetToolName, myExternalOrigin) {
             if (!navigator.modelContext) return;
             try {
@@ -114,9 +138,10 @@ Awaiting command execution...
                 myLog(`⚡ Executing isolated cross-domain call to [${mySelectedTool.name}]...`);
                 const myResponse = await navigator.modelContext.executeTool(mySelectedTool, "{}");
                 
-                // FIX: Ensure cross-origin data payload is extracted and logged to the UI
                 if (myResponse && myResponse.content && myResponse.content[0]) {
-                    myLog(`🎉 Direct Cross-Origin Response: ${myResponse.content[0].text}`);
+                    const myRawText = myResponse.content[0].text;
+                    myLog(`🎉 Direct Cross-Origin Response: ${myRawText}`);
+                    myUpdateDisplayPanel(myRawText);
                 } else {
                     myLog(`⚠️ Cross-origin tool executed but returned empty contents.`);
                 }
