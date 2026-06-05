@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebMCP Target Node B</title>
+</head>
+<body style="font-family: sans-serif; padding: 15px; background: #fff; color: #333; margin: 0;">
+
+    <div style="border: 1px solid #c3e6cb; background: #e2e3e5; padding: 15px; border-radius: 4px;">
+        <h4 style="margin: 0 0 10px 0; color: #155724;">Target Node B (Thermal Array Status)</h4>
+        <label style="display: block; font-size: 13px; margin-bottom: 4px;">Live Value:</label>
+        <input type="text" id="myDataInputB" value="Temp: 24.5C" style="width: 100%; padding: 6px; box-sizing: border-box;">
+        <p id="myStatusDisplayB" style="font-size: 12px; margin: 5px 0 0 0; color: #666;">Awaiting registration...</p>
+    </div>
+
+    <script>
+        async function myRegisterNodeBTool() {
+            const myStatusText = document.getElementById("myStatusDisplayB");
+            if (!navigator.modelContext) {
+                myStatusText.innerText = "❌ WebMCP API missing in this browser context.";
+                return;
+            }
+            try {
+                await navigator.modelContext.registerTool({
+                    name: "fetch_node_b_data",
+                    description: "Returns the real-time calibrated ambient temperature from Node B.",
+                    inputSchema: { type: "object", properties: {} },
+                    execute: async () => {
+                        const myValue = document.getElementById("myDataInputB").value;
+                        return {
+                            content: [{ type: "text", text: JSON.stringify({ nodeBData: myValue }) }]
+                        };
+                    }
+                });
+                myStatusText.innerText = "✅ Tool 'fetch_node_b_data' registered successfully.";
+            } catch (myErr) {
+                myStatusText.innerText = "❌ Error: " + myErr.message;
+            }
+        }
+        myRegisterNodeBTool();
+    </script>
+</body>
+</html>

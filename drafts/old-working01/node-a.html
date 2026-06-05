@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebMCP Target Node A</title>
+</head>
+<body style="font-family: sans-serif; padding: 15px; background: #fff; color: #333; margin: 0;">
+
+    <div style="border: 1px solid #b8daff; background: #e2e3e5; padding: 15px; border-radius: 4px;">
+        <h4 style="margin: 0 0 10px 0; color: #004085;">Target Node A (Production Line Status)</h4>
+        <label style="display: block; font-size: 13px; margin-bottom: 4px;">Live Value:</label>
+        <input type="text" id="myDataInputA" value="RPM: 1420" style="width: 100%; padding: 6px; box-sizing: border-box;">
+        <p id="myStatusDisplayA" style="font-size: 12px; margin: 5px 0 0 0; color: #666;">Awaiting registration...</p>
+    </div>
+
+    <script>
+        async function myRegisterNodeATool() {
+            const myStatusText = document.getElementById("myStatusDisplayA");
+            if (!navigator.modelContext) {
+                myStatusText.innerText = "❌ WebMCP API missing in this browser context.";
+                return;
+            }
+            try {
+                await navigator.modelContext.registerTool({
+                    name: "fetch_node_a_data",
+                    description: "Returns the current mechanical engine speed reading from Node A.",
+                    inputSchema: { type: "object", properties: {} },
+                    execute: async () => {
+                        const myValue = document.getElementById("myDataInputA").value;
+                        return {
+                            content: [{ type: "text", text: JSON.stringify({ nodeAData: myValue }) }]
+                        };
+                    }
+                });
+                myStatusText.innerText = "✅ Tool 'fetch_node_a_data' registered successfully.";
+            } catch (myErr) {
+                myStatusText.innerText = "❌ Error: " + myErr.message;
+            }
+        }
+        myRegisterNodeATool();
+    </script>
+</body>
+</html>
